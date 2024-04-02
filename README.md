@@ -1,1 +1,4 @@
-# -Deciphering-Housing-Market-Dynamics-An-Analysis-of-the-Ames-Housing-Data-Set
+# Deciphering-Housing-Market-Dynamics-An-Analysis-of-the-Ames-Housing-Data-Set
+- Spearheaded a sophisticated analysis of the Ames Housing Data Set, employing a blend of multiple linear regression, Lasso regression, and Generalized Least Squares, culminating in a predictive model that accounted for over 86% of the variability in housing prices. Demonstrated exceptional ability in data preprocessing, variable selection, and model optimization, ensuring high accuracy and reliability in property value predictions.
+- Leveraged advanced statistical techniques to refine predictive models, offering actionable recommendations for property investment and development strategies, thereby enhancing decision-making processes in the real estate market.
+- Exhibited strong technical skills in statistical programming and data analysis using R, including data visualization, Box-Cox transformation for data normalization, and stepwise regression for model refinement
