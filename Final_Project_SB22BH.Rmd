@@ -1,0 +1,620 @@
+---
+title: "Deciphering Housing Market Dynamics: An Analysis of the Ames Housing Data Set"
+author: "Sujal Bharathi Harindranath"
+date: "2023-12-04"
+output: 
+  pdf_document: 
+    fig_height: 4
+---
+
+FSU ID: SB22BH
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r get-labels, echo = FALSE}
+labs = knitr::all_labels()
+labs = setdiff(labs, c("setup", "get-labels"))
+```
+
+# Introduction
+
+The real estate market is a dynamic and vital component of the economy, influencing both individual homeowners and the broader financial landscape. Understanding the factors that drive residential property values is crucial for a range of stakeholders, from potential buyers and sellers to real estate professionals and policy makers. The Ames Housing Data Set, meticulously curated by Dean De Cock, provides a rich source of information for such an analysis. This dataset offers a comprehensive view of the housing market in Ames, Iowa, and serves as an excellent resource for statistical analysis, particularly in the realm of regression modeling.
+
+## Data Description
+
+The Ames Housing Data Set, originally compiled from 2006 to 2010, includes detailed information on residential properties in Ames, Iowa. For the purpose of this analysis, the dataset has been refined to focus on a subset of properties. This subset includes 1,359 observations, each representing a unique house, and covers 27 numeric variables. These modifications were made to tailor the dataset for academic use and to align it with the specific objectives of this study.
+
+The Ames Housing Data Set includes several variables that are crucial for understanding property values. Some of the key variables are:
+
+-   `LotArea`: Lot size in square feet.
+-   `OverallQual`: Overall quality of the house's material and finish. The scale ranges from 1 (Very Poor) to 9 (Very Excellent).
+-   `OverallCond`: Overall condition rating. The scale ranges from 1 (Very Poor) to 9 (Very Excellent).
+-   `YearBuilt`: Original construction date.
+-   `YearRemodAdd`: Remodel date.
+-   `BsmtFinSf1`: Type 1 finished square feet.
+-   `BsmtFinType2`: Type 2 finished square feet.
+-   `TotalBsmtSf`: Total square feet of basement area.
+-   `FirstFlrSf`: First floor square feet.
+-   `SecondFlrSf`: Second floor square feet.
+-   `GrLivArea`: Above grade (ground) living area square feet.
+-   `BsmtFullBath`: Number of full bathrooms in the basement.
+-   `BsmtHalfBath`: Number of half baths in the basement.
+-   `FullBath`: Number of full bathrooms above ground.
+-   `HalfBath`: Number of half baths above ground.
+-   `BedroomAbvGr`: Number of Bedrooms above ground.
+-   `KitchenAbvGr`: Number of Kitchens above ground.T
+-   `TotRmsAbvGrd`: Total rooms above ground (does not include bathrooms).
+-   `Fireplaces`: Number of fireplaces.
+-   `GarageCars`: Size of garage in car capacity.
+-   `GarageArea`: Size of garage in square feet.
+-   `WoodDeckSf`: Wood deck area in square feet.
+-   `OpenPorchSf`: Open porch area in square feet.
+-   `EnclosedPorch`: Enclosed porch area in square feet.
+-   `ThreeSsnProch`: Three season porch area in square feet.
+-   `ScreenPorch`: Screen porch area in square feet.
+-   `SalePrice`: The property's sale price in dollars. This is the response variable.
+
+The Ames Housing Data Set is particularly interesting due to its detailed and comprehensive nature. It covers a wide range of variables that are relevant to property valuation, making it an ideal dataset for exploring the complexities of the real estate market. The dataset's focus on a specific geographic location (Ames, Iowa) allows for a nuanced understanding of local market dynamics, which can be crucial for targeted real estate strategies and policy-making.
+
+A broader research question that encompasses multiple aspects of the Ames Housing Data Set could be: "What are the key determinants of residential property values in Ames, and how do various structural, spatial, and functional characteristics of homes influence their market price?" This question allows for an expansive analysis that includes factors such as the age and condition of the property, size of different areas (basement, first floor, second floor), presence of additional features like fireplaces and porches, and the size of the lot.
+
+Creating a regression model using this dataset serves multiple purposes: Predictive Analysis: To predict the sale price of properties based on various features, which is valuable for buyers, sellers, and real estate agents. Identifying Key Factors: To identify and quantify the impact of different property characteristics on its value, aiding in investment and renovation decisions. Market Insight: To gain insights into the housing market dynamics of Ames, which can be extrapolated to understand similar markets.
+
+The **primary goal** of this model is to accurately predict the sale price of residential properties in Ames, Iowa, based on their characteristics. By doing so, the model aims to uncover the key determinants of property values in this region. This understanding can guide potential buyers in making informed purchasing decisions, assist sellers in pricing their properties appropriately, and provide real estate professionals and policymakers with valuable market insights.
+
+```{r,echo=FALSE, results='hide'}
+
+suppressMessages({
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(car)
+library(MASS)
+})
+# Load the dataset
+ames_data <- read.csv("/Users/Suju/Downloads/ames_housing.csv")
+
+```
+
+```{r,echo=FALSE, results='hide'}
+
+summary(ames_data)
+
+```
+
+```{r,echo=FALSE}
+
+#Adding scatterplot
+plot(SalePrice ~ GrLivArea, data = ames_data,
+     main = "Sale Price Vs Ground Living Area", 
+     xlab = "Ground Living Area", 
+     ylab = "Sale Price", 
+     pch = 19,
+     cex  = 2,
+    col  = "darkorange")
+
+```
+
+There is a clear positive trend indicating that as the Ground Living Area increases, the Sale Price of the homes also tends to increase. This is expected as larger homes typically command higher prices. The clustering of data points at the lower end of the Ground Living Area spectrum and the wider spread at the higher end suggest that there may be more consistency in pricing for smaller homes compared to larger ones, which could reflect a variety of market behaviors or consumer preferences.
+
+```{r,echo=FALSE}
+
+#Adding boxplot
+boxplot(SalePrice ~ OverallQual, data = ames_data, 
+        main = "Sale Price Vs Overall Quality", 
+        xlab = "Overall Quality", 
+        ylab = "Sale Price",
+        pch  = 20,
+        cex  = 2,
+        col    = "navy",
+        border = "magenta")
+
+```
+
+There is a clear positive trend indicating that as the Overall Quality increases, the median Sale Price also increases. This suggests that Overall Quality is a strong predictor of Sale Price.There are several outliers at different levels of Overall Quality, particularly at the higher quality levels (7-9). These outliers indicate that there are homes that sold for prices well above the typical range for their quality category.
+
+```{r,echo=FALSE}
+
+#Adding histogram
+hist(ames_data$SalePrice, 
+     main = "Histogram of Sale Price", 
+     xlab = "Sale Price", 
+     breaks = 30, 
+     col = "blue",
+     border = "darkgreen")
+
+```
+
+The distribution of sale prices is unimodal, showing one prominent peak, which indicates that there is one price range where most of the property sales are concentrated. The peak of the histogram appears to be within the \$100,000 to \$200,000 range, suggesting that this is the most common sale price range for properties in this dataset. The distribution is right-skewed, meaning there are a tail and several properties on the higher end of the sale price range that do not follow the general clustering of the rest of the data. This skewness indicates that while most of the homes are sold at a price below \$200,000, there are homes that are sold at much higher prices, which could represent higher-end properties.
+
+```{r,echo=FALSE}
+
+#Adding scatterplot
+plot(SalePrice ~ TotalBsmtSf, data = ames_data, 
+     main = "Sale Price vs. TotalBsmtSf", 
+     xlab = "TotalBsmtSf", 
+     ylab = "Sale Price", 
+     pch = 20, 
+     cex = 2, 
+     col = "darkred")
+```
+
+The plot shows a positive correlation between the total basement square footage and the sale price. This suggests that, generally, as the size of the basement increases, the sale price of the property tends to increase as well. The clustering of points towards the lower end of the basement size range suggests a standard size for basements in the dataset, with few smaller or much larger basements.
+
+```{r,echo=FALSE}
+
+#Adding scatterplot
+plot(SalePrice ~ GarageArea, data = ames_data,
+     main = "Sale Price vs. GarageArea", 
+     xlab = "GarageArea", 
+     ylab = "Sale Price",
+     pch  = 20,
+      cex  = 2,
+      col  = "navyblue")
+
+```
+
+There appears to be a positive correlation between the GarageArea and the Sale Price. As the GarageArea increases, the Sale Price tends to increase as well, which suggests that larger garages may add value to a property. For higher values of GarageArea, the increase in Sale Price does not appear to be as significant. This could indicate a ceiling effect where beyond a certain point, the size of the garage adds less value to the property.
+
+Similarly, there are other analysis done using scatterplot, boxplots and histogram for Sale Price vs. LotArea, BedroomAbvGr, FullBath, GarageCars, Year Built, Lot Area to get more insights and patterns from the dataset.
+
+```{r,echo=FALSE, results='hide', include=FALSE}
+
+#Adding scatterplot
+plot(SalePrice ~ LotArea, data = ames_data,
+     main = "Sale Price vs. LotArea", 
+     xlab = "LotArea", 
+     ylab = "Sale Price",
+     pch  = 20,
+      cex  = 2,
+      col  = "lightgreen")
+```
+
+```{r,echo=FALSE, results='hide',include=FALSE}
+
+#Adding boxplot
+boxplot(SalePrice ~ BedroomAbvGr, data = ames_data, 
+        main = "Sale Price Vs BedroomAbvGr", 
+        xlab = "BedroomAbvGr", 
+        ylab = "Sale Price",
+        pch  = 20,
+        cex  = 2,
+        col    = "green",
+        border = "red")
+```
+
+```{r,echo=FALSE,results='hide', include=FALSE}
+
+#Adding boxplot
+boxplot(SalePrice ~ FullBath, data = ames_data, 
+        main = "Sale Price Vs FullBath", 
+        xlab = "FullBath", 
+        ylab = "Sale Price",
+        pch  = 20,
+        cex  = 2,
+        col    = "darkgreen",
+        border = "grey")
+```
+
+```{r, echo=FALSE, results='hide', include=FALSE}
+
+#Adding boxplot
+boxplot(SalePrice ~ GarageCars, data = ames_data, 
+        main = "Sale Price Vs GarageCars", 
+        xlab = "GarageCars", 
+        ylab = "Sale Price",
+        pch  = 20,
+        cex  = 2,
+        col    = "grey",
+        border = "blue")
+```
+
+```{r,echo=FALSE,results='hide', include=FALSE}
+
+#Adding histogram
+hist(ames_data$YearBuilt, 
+     main = "Histogram of Year Built", 
+     xlab = "Year Built", 
+     breaks = 30, 
+     col = "violet",
+     border = "darkgreen")
+```
+
+```{r,echo=FALSE, results='hide', include=FALSE}
+
+#Adding histogram
+hist(ames_data$LotArea, 
+     main = "Histogram of Lot Area", 
+     xlab = "Lot Area", 
+     breaks = 30, 
+     col = "darkred",
+     border = "black")
+```
+
+# Regression Analysis
+
+Prior to modeling, the Ames Housing Data Set underwent a series of preprocessing steps to ensure its suitability for regression analysis. This included:
+
+Filtering: The dataset was filtered to include properties with less than 1500 square feet of living area and those sold under 'Normal' conditions. Handling Missing Values: Rows with missing values (NA) were removed to maintain data integrity. Variable Selection: Only numeric variables were retained, and certain variables were excluded based on relevance and potential multi-collinearity issues. Renaming Variables: Some variables were renamed for clarity, such as FirstFlrSf for first-floor square feet.
+
+To achieve the best results for our regression analysis in the Ames Housing Data Set project, it's important to use a combination of methods, each serving a specific purpose in the modeling process. Here, We go ahead with a step by step approach to get the best out the model. The best model will give the best adjusted $R^2$, p-value and F-test values.
+
+**1. Initial Multiple Linear Regression (MLR)**
+
+Purpose: Establish a baseline model. Process: Starting with MLR to establish a baseline understanding of the relationships between variables. This step helps identify significant predictors and provides initial insights.
+
+```{r,echo=FALSE, results='hide'}
+# Load necessary libraries
+suppressMessages({library(car)}) # for VIF
+
+# Initial MLR model
+initial_mlr_model <- lm(SalePrice ~ ., data = ames_data)
+summary(initial_mlr_model)
+
+```
+
+Each coefficient estimate represents the expected change in the SalePrice for a one-unit change in the predictor variable, assuming other variables are held constant. The significance of these coefficients tells us whether the relationship between a predictor and the SalePrice is statistically significant. For instance, variables like OverallQual, OverallCond, YearBuilt, and GrLivArea have significant coefficients, suggesting a strong and statistically significant relationship with SalePrice.
+
+The R-squared value of 0.8668 indicates that about 86.68% of the variability in SalePrice is explained by the model. This is a measure of the model's goodness of fit. The F-statistic tests the overall significance of the model. A p-value less than 0.05 (in this case, \< 2.2e-16) suggests that the model is statistically significant, meaning that at least some of the predictor variables have a non-zero effect on SalePrice.
+
+```{r,echo=FALSE,results='hide'}
+
+shapiro.test(residuals(initial_mlr_model))
+
+```
+
+The value of W = 0.95507 suggests that the distribution of residuals is somewhat close to a normal distribution, but it's not perfectly normal. The p-value is less than 2.2e-16, which is extremely small. Hence, it rejects the null hypothesis. (typically \< 0.05). The null hypothesis states that the data is normally distributed.
+
+**2. Address Multicollinearity**
+
+Purpose: Reduce multicollinearity which can inflate standard errors Process: Use Variance Inflation Factor (VIF) to identify collinear variables.
+
+```{r,echo=FALSE, results='hide'}
+
+# Checking for multicollinearity using VIF
+vif(initial_mlr_model)
+
+```
+
+Most variables like LotArea, OverallQual, OverallCond, YearBuilt, YearRemodAdd, BsmtFinSf1, BsmtFinSf2, BsmtFullBath, BsmtHalfBath, FullBath, HalfBath, BedroomAbvGr, KitchenAbvGr, TotRmsAbvGrd, Fireplaces, WoodDeckSf, OpenPorchSf, EnclosedPorch, ThreeSsnPorch, and ScreenPorch have VIF values well below 5, indicating no major concerns of multicollinearity.
+
+FirstFlrSf, SecondFlrSf, GrLivArea, GarageCars, and GarageArea have VIF values significantly above 5, suggesting a high degree of multicollinearity.
+
+```{r,echo=FALSE, results='hide'}
+
+vif_values <- vif(initial_mlr_model)
+print(vif_values)  # This will show you the VIF values for each variable
+
+# Identify variables with high VIF (e.g., VIF > 5)
+high_vif <- names(vif_values[vif_values > 5])  # Adjust the threshold as needed
+print(high_vif)  # This will show you which variables have high VIF
+
+# Now, modify your dataset by removing variables with high VIF
+ames_data_modified <- ames_data[, !names(ames_data) %in% high_vif]
+
+```
+
+This code will first calculate the VIF for each predictor in our initial model and then identify those with VIF values above a certain threshold. High VIF values do not necessarily invalidate our model, but they do suggest that the coefficients of the affected variables might be poorly estimated due to multicollinearity.It might be worth considering removing or combining some of these highly collinear variables. For instance, we could use only one of GarageCars or GarageArea instead of both. So, here we remove the GarageCars from the model.
+
+```{r,echo=FALSE, results='hide'}
+
+# Assuming your data frame is named ames_data
+ames_data_modified <- ames_data[, !names(ames_data) %in% c("GarageCars")]
+
+# Now run your regression model without the GarageCars variable
+model <- lm(SalePrice ~ ., data = ames_data_modified)
+summary(model)
+
+```
+
+Multiple R-squared of 0.8665 suggests that about 86.65% of the variability in SalePrice is explained by the model. Adjusted R-squared of 0.864 adjusts the R-squared value for the number of predictors in the model, providing a more accurate measure of model fit. The F-statistic and its associated p-value (\< 2.2e-16) test the overall significance of the model. A very small p-value here indicates that the model is statistically significant.
+
+**3. Lasso Regression for Variable Selection**
+
+Purpose: Perform variable selection and regularization. Process: Lasso will shrink some coefficients to zero, effectively performing variable selection.
+
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
+
+# Load the lasso library
+suppressWarnings({library(glmnet)})
+
+# Prepare the data
+x <- model.matrix(SalePrice ~ . - 1, ames_data) # -1 to exclude intercept
+y <- ames_data$SalePrice
+
+# Lasso model
+lasso_model <- glmnet(x, y, alpha = 1)
+plot(lasso_model)
+
+# Selecting a lambda value (regularization parameter)
+cv_lasso <- cv.glmnet(x, y, alpha = 1)
+plot(cv_lasso)
+best_lambda <- cv_lasso$lambda.min
+
+```
+
+The first graph illustrates the coefficients of the predictor variables as a function of the L1 norm. As the L1 norm increases, the regularization effect grows, and more coefficients are shrunk towards zero.In the initial part of the path (left side of the graph), when the L1 norm is small (less regularization), many coefficients have non-zero values. This indicates a less restricted model with many variables potentially contributing to the prediction of the response variable. As we move to the right, increasing the L1 norm (introducing more regularization), many coefficients are driven to zero, simplifying the model. The variables whose coefficients remain non-zero are likely to be the more important predictors for the SalePrice. The variables that rapidly approach zero are less significant in predicting SalePrice, while those that shrink towards zero more slowly or remain non-zero even under stronger regularization are more likely to be key determinants of house prices.
+
+The second graph displays the mean squared error (MSE) for different values of the regularization parameter, $\lambda$. The goal here is to find the $\lambda$ that minimizes the MSE. The graph shows a clear U-shape, with the MSE decreasing as $\lambda$ increases from a low value, reaching a minimum, and then starting to increase again. This pattern indicates an optimal region where the model is balanced---complex enough to fit the data well but not so complex that it starts to overfit. The $\lambda$ corresponding to the lowest point on the curve (the dotted vertical line) represents the best trade-off between bias and variance. The model with this $\lambda$ should generalize well to new, unseen data. The number of variables selected by the model at this optimal $\lambda$ can be read from the upper x-axis of the cross-validation graph, providing a direct indication of the model complexity.
+
+**4. Refined Multiple Linear Regression**
+
+Purpose: Build a refined MLR model with selected variables. Process: Use the variables selected by Lasso to build a new MLR model.
+
+```{r,echo=FALSE, results='hide'}
+
+# Using variables selected by Lasso
+lasso_selected_vars <- coef(lasso_model, s = best_lambda)
+selected_vars <- names(lasso_selected_vars[lasso_selected_vars != 0])
+
+# Refined MLR model
+refined_formula <- as.formula(paste("SalePrice ~.", paste(selected_vars[-1], collapse = " + ")))
+refined_mlr_model <- lm(refined_formula, data = ames_data)
+summary(refined_mlr_model)
+
+```
+
+Several variables are statistically significant in predicting SalePrice, as indicated by the p-values (Pr(\>\|t\|)). Variables like LotArea, OverallQual, OverallCond, YearBuilt, YearRemodAdd, BsmtFinSf1, BsmtFinSf2, TotalBsmtSf, FirstFlrSf, Fireplaces, GarageCars, WoodDeckSf, OpenPorchSf, and ScreenPorch show strong significance (p \< 0.05). The model's R-squared value is 0.8668, suggesting that about 86.68% of the variability in SalePrice is explained by the model. The adjusted R-squared of 0.8642 adjusts for the number of predictors in the model, providing a more accurate measure of model fit. The F-statistic is highly significant (p-value \< 2.2e-16), indicating that the model as a whole is statistically significant, and there is a relationship between the predictors and the response variable. The model provides a quantitative understanding of how different features of a house in Ames contribute to its sale price. For instance, the positive coefficients of LotArea, OverallQual, and YearBuilt affirm that larger lot sizes, higher quality, and newer construction contribute to higher sale prices.
+
+**5. Model Diagnostics and Validation**
+
+Purpose: Ensure model robustness and adherence to assumptions. Process: Reassess model diagnostics with the refined model. Check residuals, influence measures, and overall model fit.
+
+```{r,echo=FALSE}
+
+# Diagnostic Plots for Refined Model
+par(mfrow = c(2, 2))
+plot(refined_mlr_model)
+
+```
+
+```{r,echo=FALSE, results='hide'}
+
+# Cross-validation (example using 10-fold CV)
+suppressMessages({library(boot)})
+set.seed(123) # for reproducibility
+cv_results <- cv.glm(ames_data, refined_mlr_model, K = 10)
+print(cv_results)
+
+```
+
+In this case, there seems to be a pattern, suggesting that the residuals have a non-linear relationship, which may imply that the model does not capture all the explanatory information.
+
+Normal Q-Q (Quantile-Quantile): Points following the line closely suggest that the residuals are normally distributed. Significant deviations from the line suggest deviations from normality. Here, the plot shows that the residuals deviate from the expected line in the tails, indicating potential issues with normality, particularly with some outliers present.
+
+Scale-Location (or Spread-Location): The plot indicates that residuals are spread differently across the range of predictors, which can imply heteroscedasticity (i.e., non-constant variance of residuals).
+
+Residuals vs Leverage: Points with high leverage can potentially be outliers. The Cook's distance (depicted by dashed lines) helps to identify these influential points.There are a few points that stand out on the right side of the plot, which means they have high leverage and could be influential points.
+
+After looking at all the results from different models, it seems that the Lasso Regression model might have provided the best results for the Ames Housing Data Set. Here's why:
+
+*Variable Selection*: Lasso Regression is particularly effective for datasets with a large number of predictor variables. It performs variable selection by shrinking the less important feature's coefficients to zero, thus effectively removing them from the model. This leads to a simpler, more interpretable model that focuses on the most relevant predictors.
+
+*Handling Multicollinearity*: Lasso can manage multicollinearity (high correlation among predictor variables) better than standard Multiple Linear Regression (MLR). In your dataset, variables like GarageCars and GarageArea were highly collinear, and Lasso helps in selecting one over the other or combining their effects efficiently.
+
+*Model Complexity and Overfitting*: The Lasso model uses regularization to prevent overfitting, which is a common problem in complex models. The cross-validation plot you described suggests that Lasso effectively found a balance between bias and variance, optimizing model complexity.
+
+*Interpretability*: The final model from Lasso Regression is generally easier to interpret than a model with a large number of variables, as it only includes the most significant predictors.
+
+# Discussion
+
+In the context of the research question, "What are the key determinants of residential property values in Ames, and how do various structural, spatial, and functional characteristics of homes influence their market price?", the Lasso Regression model provides a focused answer. By penalizing the magnitude of the coefficients of features, Lasso drives many of them to zero, effectively selecting a subset of features that contribute the most to predicting house prices.
+
+For stakeholders in the real estate market---such as sellers, buyers, investors, and analysts---the model simplifies the complexity of the housing market. It identifies the features that are most associated with property values, which could range from the square footage of living space to the presence of amenities like garages and fireplaces. For example, if the model retains GrLivArea but not SecondFlrSf, stakeholders might infer that the total living area, irrespective of how it's distributed across floors, is more important for pricing than just having a second floor.
+
+```{r,echo=FALSE, results='hide'}
+chooseCRANmirror(ind = 1) # where 'ind' is the index of the mirror you want to use
+install.packages("glmnet")
+install.packages("glmnetUtils")
+suppressMessages({library(glmnet)
+library(glmnetUtils)})
+
+```
+
+```{r,echo=FALSE,results='hide'}
+# Assuming ames_data is your dataset and SalePrice is the response variable
+
+# Fit the Lasso model using glmnetUtils
+lasso_fit <- glmnet(SalePrice ~ ., data = ames_data, family = "gaussian", alpha = 1)
+
+# Determine the best lambda using cross-validation
+cv_lasso_fit <- cv.glmnet(SalePrice ~ ., data = ames_data, family = "gaussian", alpha = 1)
+
+# Best lambda value
+best_lambda <- cv_lasso_fit$lambda.min
+
+# Refit the model with the best lambda
+best_lasso_fit <- update(lasso_fit, lambda = best_lambda)
+
+# Summary of the model
+summary(best_lasso_fit)
+
+```
+
+```{r,echo=FALSE, results='hide'}
+# Extract coefficients at best lambda
+lasso_coefs <- coef(lasso_model, s = best_lambda)[,1]
+non_zero_coefs <- lasso_coefs[lasso_coefs != 0]
+print(non_zero_coefs)
+
+```
+
+Intercept (-1.047420e+06): This is the base value for the SalePrice when all other predictor variables are zero. It's a large negative number, which in practice, may not have a meaningful interpretation since most predictor variables cannot be zero (e.g., LotArea, YearBuilt).
+
+LotArea (1.172854e+00): Indicates that for each additional square foot in LotArea, the SalePrice increases by approximately \$1.17, assuming other variables are constant.
+
+OverallQual (8.922090e+03): Suggests that for each one-point increase in Overall Quality, the SalePrice increases by approximately \$8,922.
+
+GrLivArea (3.651796e+01): Indicates that for each additional square foot in above-grade living area, the SalePrice increases by approximately \$36.52.
+
+Similar interpretations can be made for the other variables like Fireplaces, GarageArea, WoodDeckSf, etc., based on their coefficients.These findings align with the research question about key determinants of residential property values. Variables like Overall Quality, Size (LotArea, TotalBsmtSf, FirstFlrSf, GrLivArea), and amenities (Fireplaces, GarageCars) significantly impact the SalePrice. Newer homes (YearBuilt) and homes in better condition (OverallCond) also tend to have higher prices.
+
+```{r,echo=FALSE, results='hide'}
+
+# Creating a simplified linear model using non-zero coefficients from Lasso
+simplified_formula <- as.formula(paste("SalePrice ~", paste(names(non_zero_coefs)[-1], collapse = " + ")))
+simplified_model <- lm(simplified_formula, data = ames_data)
+summary(simplified_model)
+
+```
+
+Coefficients and Their Significance: Overall Quality and Condition (OverallQual, OverallCond):
+
+*OverallQual*: A high positive coefficient (8,835) with high significance (\<2e-16) indicates that better overall quality significantly increases the SalePrice. OverallCond: Similarly, a positive coefficient (4,292) with high significance (\<2e-16) suggests that better overall condition also positively impacts the SalePrice. Property Size Variables (LotArea, TotalBsmtSf, FirstFlrSf, GrLivArea):
+
+LotArea, TotalBsmtSf, FirstFlrSf, and GrLivArea all have positive coefficients, suggesting that larger sizes in these aspects are associated with higher SalePrices. This aligns with the hypothesis that larger properties sell for higher prices. Age and Remodeling of Property (YearBuilt, YearRemodAdd):
+
+*YearBuilt*: The positive coefficient (377.6) indicates that newer houses tend to have higher SalePrices. YearRemodAdd: A positive coefficient (151.4) suggests that recently remodeled homes also fetch higher prices, supporting the hypothesis about the value of newer or updated properties. Additional Features (Fireplaces, GarageCars, WoodDeckSf, OpenPorchSf):
+
+These features have positive coefficients, indicating that the presence of these amenities contributes to a higher SalePrice. Bedrooms and Kitchens (BedroomAbvGr, KitchenAbvGr):
+
+Surprisingly, both have negative coefficients, indicating that more bedrooms or kitchens above ground level could decrease the SalePrice. This might reflect market preferences or other underlying factors not captured by the model. Model Fit and Significance: R-squared (0.8666) and Adjusted R-squared (0.8643): These values are quite high, indicating that approximately 86.66% of the variability in SalePrice is explained by the model. The adjusted R-squared accounts for the number of predictors, ensuring the model isn't overly complex.
+
+F-statistic (377.2) and p-value (\< 2.2e-16): The F-statistic is very high, and the associated p-value is extremely low, indicating that the model is statistically significant. This means the variables included in the model have a strong collective impact on predicting SalePrice.
+
+My comprehensive regression analysis of the Ames Housing Data Set has provided significant insights into the determinants of residential property values in Ames, Iowa, during the period 2006-2010. The analysis revealed that larger property sizes, as indicated by variables such as LotArea, TotalBsmtSf, FirstFlrSf, and GrLivArea, are positively correlated with higher sale prices, underscoring the premium placed on spacious living areas in the Ames housing market. Additionally, the condition and age of properties emerged as crucial factors, with newer and well-maintained homes (YearBuilt and OverallCond) commanding higher prices. This finding emphasizes the value of recent construction and maintenance in the real estate market. Surprisingly, the analysis indicated a negative correlation between the number of bedrooms (BedroomAbvGr) and kitchens (KitchenAbvGr) with sale prices, suggesting a preference for smaller, more efficient homes in this region.
+
+These results not only provide valuable insights for potential homebuyers, sellers, and real estate professionals in Ames, but also offer important implications for real estate investment and development strategies. The preference for larger living spaces and newer properties could guide homeowners in making effective renovation decisions and assist developers in identifying key features that enhance property value. The unexpected negative impact of additional bedrooms and kitchens on sale prices might influence market strategies, potentially leading to a shift towards developing smaller, yet high-quality homes. While these findings are specific to the Ames market, they may resonate with similar markets, albeit with careful consideration of local dynamics. This study sets a foundational understanding of the housing market in Ames and paves the way for future research, particularly in exploring evolving trends post-2010 and assessing the generalizability of these insights to broader contexts.
+
+# Limitations
+
+The Ames Housing Data Set offers detailed insights into the Ames, Iowa, real estate market but presents limitations in its generalizability. The data, specific to 2006-2010, reflects market conditions influenced by the global financial crisis, potentially skewing analysis results. Moreover, the linear regression models, including Lasso Regression, assume linear relationships, which might oversimplify complex market dynamics. Diagnostic plots indicate possible model assumption violations, such as non-normal distribution of residuals. The model's unexpected negative coefficients for bedrooms and kitchens also highlight unique market characteristics or dataset anomalies, underscoring the need for caution in extrapolating these findings to other markets.
+
+Future research would benefit from incorporating diverse datasets from different regions and time periods to enhance generalizability. Addressing model assumption violations, exploring non-linear relationships, and including macroeconomic factors could provide a more comprehensive understanding of housing market dynamics. Despite these limitations, the study offers valuable insights into the factors influencing housing prices in Ames, although its application to broader contexts requires careful consideration.
+
+# Conclusion
+
+The analysis of the Ames Housing Data Set, using Lasso Regression and other linear models, has yielded significant insights into the residential real estate market in Ames, Iowa, during 2006-2010. Key findings include:
+
+Positive Correlations with Sale Price: Larger lot sizes (LotArea), higher overall quality (OverallQual), and newer construction (YearBuilt) positively influence sale prices. These results align with general real estate market expectations, highlighting the premium placed on space, quality, and modernity.
+
+Negative Impact of Bedrooms and Kitchens: Unexpectedly, more bedrooms (BedroomAbvGr) and kitchens (KitchenAbvGr) are associated with lower sale prices. This could reflect specific preferences in Ames or suggest that larger family homes might not be as valued in this market.
+
+*Model Effectiveness*: The Lasso Regression model, by simplifying the data and focusing on significant variables, provided a balance between model complexity and interpretability. With an R-squared value of approximately 0.8666, the model effectively captures the variability in sale prices. However, this high explanatory power should be interpreted with caution due to the model's potential limitations.
+
+In the course of our comprehensive regression analysis of the Ames Housing dataset, an intriguing observation emerged: the outputs of our initial and final regression models displayed a remarkable similarity. Despite the rigorous process of variable selection, including addressing multicollinearity and employing Lasso regression for feature refinement, the final model did not significantly deviate from the insights provided by the initial model. This consistency in results may be indicative of the robustness of the initial model and the inherent characteristics of the dataset, which did not reveal further complexities or hidden patterns even under more sophisticated analytical techniques. It's noteworthy that the initial model, with its simpler approach, was able to capture the essential dynamics of the dataset effectively, a testament to both the quality of the data and the initial model's adequacy. This observation underscores an important aspect of statistical modeling - that increasing model complexity does not always equate to a substantial enhancement in explanatory power or predictive accuracy, especially when the initial model is well-constructed and the data itself is straightforward in its structure.
+
+Limitations: The study's findings are primarily applicable to Ames and may not generalize to other regions or time periods. Also, the negative coefficients for certain variables suggest further research is needed to fully understand these relationships.
+
+Future research should focus on expanding the scope of the data, both in terms of geography and time. Incorporating data post-2010 could provide insights into how the housing market has evolved, especially considering economic changes and real estate trends. Additionally, exploring advanced machine learning techniques and non-linear models could uncover more complex relationships within the data. This study serves as a foundational step in understanding the intricacies of residential property valuation and sets the stage for more comprehensive future analyses.
+
+# Additional Work
+
+There are some further analysis done using Box-Cox and GLS methods as it provides a basis for further refinement of the regression models, ensuring that the underlying assumptions of normality and homoscedasticity are better met.
+
+**1. Box-Cox Transformation**
+
+```{r,echo=FALSE}
+# Box-Cox Transformation (if needed)
+suppressMessages({library(MASS)})
+bc_transform <- boxcox(refined_mlr_model)
+```
+
+The Box-Cox transformation graph indicates that the optimal $\lambda$ value for normalizing the SalePrice distribution is close to zero. This suggests that a log transformation (as $\lambda$ approaches zero) could be the most appropriate normalization for the SalePrice variable. The transformation could potentially stabilize variance and correct any skewness in the distribution, making the linear modeling assumptions more tenable. Incorporating this transformation into the regression models may lead to improved model fit and more reliable predictions. Future analyses could explore the impact of this transformation on the regression results, assessing the robustness and predictive power of the models post-transformation.
+
+**2. Generalized Least Squares**
+
+```{r,echo=FALSE, results='hide'}
+# Generalized Least Squares (if needed)
+suppressMessages({library(nlme)})
+gls_model <- gls(SalePrice ~ ., data = ames_data)
+summary(gls_model)
+```
+
+From the GLS output, the following conclusions can be drawn:
+
+The coefficients for the predictors remain relatively consistent with the findings from the previous models, such as the positive association of LotArea, OverallQual, and YearBuilt with SalePrice, reinforcing their importance in predicting housing prices.
+
+The correlation matrix shows the relationships between predictors. For instance, there is a strong negative correlation between GarageCars and GarageArea (-0.829), which is expected as they represent similar aspects of a property.
+
+The standardized residuals indicate the spread of the residuals around zero. Ideally, residuals should be normally distributed, which means most should lie close to zero, with fewer extreme values. The range of standardized residuals from -4.44 to 5.84 suggests there may be some outliers or influential points affecting the model.
+
+Residual standard error (RSE) is slightly higher than what was observed in the linear model, indicating that the GLS model's predictions are on average around 13,595 units from the actual sale prices.
+
+The AIC (Akaike Information Criterion), BIC (Bayesian Information Criterion), and log-likelihood values are useful for model comparison. Lower AIC and BIC values generally indicate a better-fitting model.
+
+The p-values for each predictor show the significance of each coefficient. A p-value less than 0.05 typically suggests that the corresponding predictor is statistically significant. For instance, predictors such as LotArea, OverallQual, and YearBuilt have p-values of 0.0000, indicating strong evidence against the null hypothesis of no effect.
+
+In conclusion, the GLS model provides a robust alternative to the standard linear regression, offering adjustments for any violation of the OLS assumptions. This model confirms the significance of key predictors while adjusting for potential correlations and heteroscedasticity in the data. The inclusion of GLS modeling in the Additional Work section demonstrates a thorough exploration of different statistical techniques to ensure the reliability and validity of the study's findings. Future work could involve further investigation of potential outliers and leverage points that might influence the model's predictions.
+
+**3. Stepwise Regression (Forward, Backward, or Both)**
+
+This method systematically adds or removes variables based on their statistical significance, helping to identify the most relevant predictors for the sale price. In addition to the primary analyses conducted, an exploration through stepwise regression could further refine our understanding of the most influential predictors of house sale prices. Stepwise regression, with its systematic approach to adding or removing variables based on statistical significance, offers a method to optimize our model by focusing on the most relevant factors.
+
+```{r,echo=FALSE, results='hide'}
+
+#Backward Elimination
+
+# Full model with all predictors
+full_model <- lm(SalePrice ~ ., data = ames_data)
+
+# Stepwise regression using backward elimination
+backward_model <- step(full_model, direction = "backward", trace = 0)
+summary(backward_model)
+
+```
+
+```{r,echo=FALSE, results='hide'}
+
+#Forward Selection
+
+# Minimal model with no predictors
+minimal_model <- lm(SalePrice ~ 1, data = ames_data)
+
+# Stepwise regression using forward selection
+forward_model <- step(minimal_model, direction = "forward", scope = list(lower = minimal_model, upper = full_model), trace = 0)
+summary(forward_model)
+
+```
+
+```{r,echo=FALSE, results='hide'}
+
+#Bidirectional Approach
+
+# Stepwise regression using both directions
+both_model <- step(minimal_model, direction = "both", scope = list(lower = minimal_model, upper = full_model), trace = 0)
+summary(both_model)
+
+```
+
+The outputs from the backward, forward, and bidirectional stepwise regression methods applied to the Ames Housing Data Set provide a comprehensive and consistent view of the key factors influencing house sale prices. Notably, all three methods yielded a highly similar model, signifying a strong agreement in the selection of predictors. This model robustly highlights the importance of variables such as OverallQual, YearBuilt, GrLivArea, and OverallCond, underscoring that the quality, size, and condition of properties are pivotal in determining their market value. Intriguingly, the negative coefficients for variables like BedroomAbvGr and KitchenAbvGr suggest that an increase in the number of bedrooms or kitchens above ground may not necessarily enhance property value, possibly indicating a market preference for simpler or more efficient layouts.
+
+For stakeholders in the real estate market, these findings are particularly insightful. Real estate developers and investors can glean that focusing on the overall quality and efficient use of space might yield better returns on investment. Homeowners considering renovations can infer that improvements enhancing the overall quality or living area are likely more beneficial for increasing property value than merely adding more bedrooms or kitchens. Real estate agents can use this information to advise clients on both buying and selling strategies, emphasizing the identified features that drive sale prices. Furthermore, the consistency across different stepwise regression approaches adds a layer of reliability to these insights, offering stakeholders a solid foundation for decision-making. These results directly address the research question by elucidating the key determinants of residential property values in Ames, providing stakeholders with actionable insights grounded in rigorous statistical analysis.
+
+**4. ANOVA(Analysis of Variance)**
+
+Now, in this model, we also have categorical variables (like OverallQual), which could be used to understand how different categories affect prices using ANOVA.
+
+To use ANOVA (Analysis of Variance) in our model, we typically want to test whether the means of different groups (defined by our categorical variables) are significantly different. This can be particularly useful if our model includes categorical predictors, like neighborhood, property type, or any other factor that splits our data into categories.
+
+For demonstration, I'll use OverallQual (Overall Quality) which is a categorical variable in our dataset, even though it's represented by numeric values (1 to 9). We will examine whether different levels of OverallQual significantly affect the sale price of houses.
+
+```{r,echo=FALSE, results='hide'}
+
+# Fit the linear model
+# Assuming your linear model is named 'model'
+
+# Fit the linear model
+model <- lm(SalePrice ~ OverallQual, data = ames_data)
+
+# Perform ANOVA
+anova_result <- anova(model)
+print(anova_result)
+
+```
+
+The F value of 1496 is very high, which suggests a strong relationship between OverallQual and SalePrice. The Pr(\>F) value is less than 2.2e-16, which is a notation for a value extremely close to zero. This p-value is well below any standard significance level (like 0.05 or 0.01), indicating that the relationship is statistically significant.
+
+Sum Sq (Sum of Squares) for OverallQual (9.6905e+11) represents the variance explained by this variable. Residuals Sum Sq (8.7902e+11) is the variance that is not explained by the OverallQual. Mean Sq is the Sum of Squares divided by its degrees of freedom (Df). For OverallQual, it's a large value, indicating a strong effect.
+
+The results strongly suggest that OverallQual has a significant impact on SalePrice. This means that different levels of quality in houses are associated with different sale prices. In practical terms, this indicates that as the overall quality of a house increases, its sale price is likely to increase as well. This is a critical insight for potential buyers, sellers, and real estate developers. It underscores the importance of quality in property valuation.
+
+Furthermore, this methodology of treating numerical variables as categorical for in-depth analysis is not limited to the variables mentioned. A similar approach can be applied to other variables in the dataset, allowing for a broader and more comprehensive understanding of the factors influencing house prices. Exploring additional variables in this manner can reveal further insights, enriching our knowledge of the housing market dynamics and potentially uncovering new trends and correlations that could be valuable for both theoretical understanding and practical applications in real estate.
+
+## Code Appendix
+
+```{r all-code, ref.label=labs, eval=FALSE}
+```
